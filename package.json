@@ -1,0 +1,35 @@
+{
+	"name": "directus-extension-dev-canvas",
+	"description": "A module for developing Directus extensions with hot-reloading",
+	"icon": "extension",
+	"version": "1.0.0",
+	"license": "GNU-AGPL-3.0",
+	"repository": "https://github.com/u12206050/directus-extension-dev-canvas",
+	"author": "Gerard Lamusse",
+	"keywords": [
+		"directus",
+		"directus-extension",
+		"directus-extension-module"
+	],
+	"type": "module",
+	"files": [
+		"dist",
+		"host-deps.js"
+	],
+	"directus:extension": {
+		"type": "module",
+		"path": "dist/index.js",
+		"source": "src/index.ts",
+		"host": "^10.10.0"
+	},
+	"scripts": {
+		"build": "directus-extension build",
+		"dev": "directus-extension build -w --no-minify",
+		"link": "directus-extension link"
+	},
+	"devDependencies": {
+		"@directus/extensions-sdk": "12.1.4",
+		"typescript": "^5.7.3",
+		"vue": "^3.5.13"
+	}
+}
