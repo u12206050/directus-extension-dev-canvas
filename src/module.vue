@@ -2,11 +2,12 @@
 	<v-dialog v-model="showDialog">
 		<v-card class="dev-canvas-dialog">
 			<v-card-title>Load Extension</v-card-title>
-			<v-card-text>
+			<br />
+			<v-sheet>
 				<v-form :fields="LoadExtForm" v-model="extConfig" />
 
 				<v-error v-if="error" :error="error" />
-			</v-card-text>
+			</v-sheet>
 			<v-card-actions>
 				<v-button @click="loadRemoteComponent">Load It</v-button>
 			</v-card-actions>
@@ -17,19 +18,29 @@
 		<v-icon name="developer_board" />
 	</v-button>
 
-	<v-progress-linear v-if="!extensionDef" indeterminate />
+	<!-- LAYOUTS -->
+	<LayoutCanvas v-if="extensionDef && extConfig.type === 'layout'" :config="extensionDef" />
+	<!-- MODULES -->
+	<template v-else-if="extensionDef && extConfig.type === 'module'">
+		<router-view />
+	</template>
 	<!-- DISPLAYS & INTERFACES -->
 	<private-view
-		v-else-if="extConfig.type !== 'module' && extConfig.type !== 'layout'"
+		v-else
 		class="dev-canvas no-sidebar"
 		title="Development Canvas"
-		split-view>
-		<v-sheet>
+		:split-view="!!extensionDef">
+
+		<v-sheet v-if="!extensionDef">
+			<v-notice>No extension loaded</v-notice>
+		</v-sheet>
+
+		<v-sheet v-else>
 			<v-form v-model="extProps" :fields="extFields" />
 		</v-sheet>
 
 		<template #splitView>
-			<v-sheet v-if="showExt">
+			<v-sheet v-if="extensionDef && showExt">
 				<component
 					:is="extensionDef"
 					v-bind="extProps"
@@ -39,12 +50,7 @@
 			</v-sheet>
 		</template>
 	</private-view>
-	<!-- LAYOUTS -->
-	<LayoutCanvas v-else-if="extConfig.type === 'layout'" :config="extensionDef" />
-	<!-- MODULES -->
-	<template v-else>
-		<router-view />
-	</template>
+	
 </template>
 
 <script setup lang="ts">
@@ -62,11 +68,11 @@ const ctx = ref();
 const extensionDef = ref();
 const error = ref<any>(null);
 
-
-const extConfig = ref({
+const DEFAULTS = {
 	type: 'module',
 	path: 'http://localhost:5173/src/index.ts',
-});
+}
+const extConfig = ref(DEFAULTS);
 const extCollection = ref('');
 
 // Toggle this between testValue changes to refresh the component
@@ -95,10 +101,13 @@ try {
 		extConfig.value = JSON.parse(storedSettings);
 		if (extConfig.value.path && extConfig.value.type) {
 			loadRemoteComponent();
+		} else {
+			extConfig.value = DEFAULTS;
 		}
 	}
 } catch (e) {
 	// ignore
+	extConfig.value = DEFAULTS;
 }
 
 // Watch for changes and update localStorage
@@ -108,18 +117,6 @@ watch(extConfig, (config) => {
 
 const LoadExtForm = [
 	{
-		name: 'Type',
-		field: 'type',
-		type: 'string',
-		meta: {
-			interface: 'select-dropdown',
-			required: true,
-			options: {
-				items: ['module', 'display', 'interface', 'layout'],
-			},
-		},
-	},
-	{
 		name: 'URI',
 		field: 'path',
 		type: 'string',
@@ -128,6 +125,19 @@ const LoadExtForm = [
 			required: true,
 			options: {
 				placeholder: 'http://localhost:5173/src/index.ts',
+			},
+			note: "The full url and path to your extension's entry file",
+		},
+	},
+	{
+		name: 'Type',
+		field: 'type',
+		type: 'string',
+		meta: {
+			interface: 'select-dropdown',
+			required: true,
+			options: {
+				items: ['module', 'display', 'interface', 'layout'],
 			},
 		},
 	},
@@ -252,6 +262,11 @@ hmr();
 	bottom: 1rem;
 	right: 1rem;
 	z-index: 1000;
+}
+
+.dev-canvas-dialog.v-card {
+	--theme--form--row-gap: 24px;
+	--v-sheet-padding: 24px;
 }
 
 .dev-canvas .module-nav,
