@@ -33,7 +33,7 @@ function scanDependencyFiles() {
 	for (const file of files) {
 		for (const { name, pattern } of patterns) {
 			if (pattern.test(file)) {
-				result[name] = `\${HOST_URL}/admin/assets/${file}`;
+				result[name] = `%\${HOST_URL}/admin/assets/${file}%`;
 				break;
 			}
 		}
@@ -45,7 +45,10 @@ function scanDependencyFiles() {
 // Execute and output results
 try {
 	const mappings = scanDependencyFiles();
-	console.log(JSON.stringify(mappings, null, 2));
+	const json = JSON.stringify(mappings, null, 2);
+
+	const escaped = json.replace(/"%/g, '`').replace(/%"/g, '`');
+	console.log(escaped);
 } catch (error) {
 	console.error('Error:', error.message);
 	process.exit(1);

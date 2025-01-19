@@ -9,6 +9,7 @@
 				<v-error v-if="error" :error="error" />
 			</v-sheet>
 			<v-card-actions>
+				<v-button @click="loadExtensions" secondary>Reload Extensions List</v-button>
 				<v-button @click="loadRemoteComponent">Load It</v-button>
 			</v-card-actions>
 		</v-card>
@@ -19,9 +20,9 @@
 	</v-button>
 
 	<!-- LAYOUTS -->
-	<LayoutCanvas v-if="extensionDef && extConfig.type === 'layout'" :config="extensionDef" />
+	<LayoutCanvas v-if="extensionDef && extType === 'layout'" :collection="extConfig.collection" :config="extensionDef" />
 	<!-- MODULES -->
-	<template v-else-if="extensionDef && extConfig.type === 'module'">
+	<template v-else-if="extensionDef && extType === 'module'">
 		<router-view />
 	</template>
 	<!-- DISPLAYS & INTERFACES -->
@@ -44,9 +45,12 @@
 				<component
 					:is="extensionDef"
 					v-bind="extProps"
-					:value="testValue"
 					:collection="extConfig.collection"
 					:field="extField" />
+			</v-sheet>
+			<br />
+			<v-sheet>
+				<v-button x-small secondary @click="refreshExt">Refresh</v-button>
 			</v-sheet>
 		</template>
 	</private-view>
@@ -54,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import LayoutCanvas from './LayoutCanvas.vue';
 import hmr from './hmr';
@@ -68,38 +72,108 @@ const ctx = ref();
 const extensionDef = ref();
 const error = ref<any>(null);
 
+const UI_EXTENSIONS = ['display', 'interface', 'layout', 'module', 'bundle'];
 const DEFAULTS = {
-	type: 'module',
-	path: 'http://localhost:5173/src/index.ts',
+	server: 'http://localhost:5173',
 }
 const extConfig = ref(DEFAULTS);
 const extCollection = ref('');
+const extType = ref('');
 
-// Toggle this between testValue changes to refresh the component
+// Toggle this between changes to refresh the component
 const showExt = ref(true);
-const testValue = ref('');
-
-watch(testValue, () => {
-	const { type } = extConfig.value;
-	if (type === 'display' || type === 'interface') {
-		showExt.value = false;
-		nextTick(() => {
-			showExt.value = true;
-		});
-	}
-});
-
 
 // For displays, interfaces
 const extFields = ref([]);
 const extProps = ref({});
+
+const extensions = ref<Array<{
+	type: string;
+	name: string;
+	source: string;
+}>>([]);
+
+const LoadExtForm = computed(() => {
+	const opts = extensions.value.map((ext: any) => {
+		return {
+			text: `${ext.type.toUpperCase()} - ${ext.name}`,
+			value: ext.name,
+		}
+	});
+	opts.sort((a: any, b: any) => a.text.localeCompare(b.text));
+	return [
+		{
+			name: 'Vite Server',
+			field: 'server',
+			type: 'string',
+			meta: {
+				interface: 'input',
+				required: true,
+				options: {
+					placeholder: 'http://localhost:5173',
+				},
+				note: "The full url and port of your vite server",
+			},
+		},
+		{
+			name: 'Select Extension',
+			field: 'extension',
+			type: 'string',
+			meta: {
+				interface: 'select-dropdown',
+				options: {
+					items: opts,
+				},
+			},
+		},
+		{
+			name: 'Test Collection',
+			field: 'collection',
+			type: 'string',
+			meta: {
+				interface: 'system-collection',
+				options: {
+					placeholder: 'Select collection',
+				},
+				conditions: [
+					{
+						name: "Extension selected",
+						rule: {
+							extension: {
+								_nnull: true,
+							},
+						},
+						hidden: false,
+					},
+				],
+				hidden: true,
+				note: "This is optional, your extension might not need it.",
+			},
+		},
+	];
+});
+
+const TestValueFields = [
+	{
+		name: 'Test Value',
+		field: 'value',
+		type: 'string',
+		meta: {
+			field: 'value',
+			interface: 'input',
+			options: {
+				placeholder: 'Test Value',
+			},
+		},
+	},
+];
 
 // Sync extPath with localStorage
 try {
 	const storedSettings = localStorage.getItem('dev-canvas-settings');
 	if (storedSettings) {
 		extConfig.value = JSON.parse(storedSettings);
-		if (extConfig.value.path && extConfig.value.type) {
+		if (extConfig.value.extension) {
 			loadRemoteComponent();
 		} else {
 			extConfig.value = DEFAULTS;
@@ -115,73 +189,58 @@ watch(extConfig, (config) => {
 	localStorage.setItem('dev-canvas-settings', JSON.stringify(config));
 });
 
-const LoadExtForm = [
-	{
-		name: 'URI',
-		field: 'path',
-		type: 'string',
-		meta: {
-			interface: 'input',
-			required: true,
-			options: {
-				placeholder: 'http://localhost:5173/src/index.ts',
-			},
-			note: "The full url and path to your extension's entry file",
-		},
-	},
-	{
-		name: 'Type',
-		field: 'type',
-		type: 'string',
-		meta: {
-			interface: 'select-dropdown',
-			required: true,
-			options: {
-				items: ['module', 'display', 'interface', 'layout'],
-			},
-		},
-	},
-	{
-		name: 'Test Collection',
-		field: 'collection',
-		type: 'string',
-		meta: {
-			interface: 'system-collection',
-			options: {
-				placeholder: 'Select collection',
-			},
-			conditions: [
-					{
-						name: "Optional collection",
-						rule: {
-							type: {
-								_nin: ['display', 'interface'],
-							},
-						},
-						hidden: true,
-					},
-			],
-		},
-	},
-];
+watch(() => extConfig.value.server, loadExtensions, { immediate: true });
 
-const TestValueField = {
-	name: 'Test Value',
-	field: 'value',
-	type: 'string',
-	meta: {
-		field: 'value',
-		special: null,
-		interface: 'input',
-		options: {
-			placeholder: 'Test Value',
-		},
-	},
-};
+watch(extProps, refreshExt);
+
+function refreshExt() {
+	showExt.value = false;
+	nextTick(() => {
+		showExt.value = true;
+	});
+}
+
+async function loadExtensions() {
+	// Check server is a url before loading using regex:
+	if (!extConfig.value.server.match(/^https?:\/\/.*:\d{2,5}/)) return;
+
+	try {
+		const res = await fetch(`${extConfig.value.server}/package.json`);
+		const pkg = await res.json();
+		const extension = pkg["directus:extension"];
+
+		if (!extension) {
+			return error.value = 'No extension found in package.json';			
+		}
+
+		if (extension.type === 'bundle') {
+			extensions.value = extension.entries.filter((ext: any) => UI_EXTENSIONS.includes(ext.type));
+		} else if (UI_EXTENSIONS.includes(extension.type)) {
+			extensions.value = [extension];
+			extConfig.value.extension = extension.name;
+		} else {
+			return error.value = `Extension type ${extension.type} is not supported`;
+		}
+
+		loadRemoteComponent()
+	} catch (e) {
+		console.warn(e);
+	}
+}
 
 // A function to load (or reload) the remote component
 async function loadRemoteComponent() {
-	const { path, type, collection } = extConfig.value;
+	if (!extConfig.value.extension) return;
+	const extension = extensions.value.find((ext: any) => ext.name === extConfig.value.extension);
+	if (!extension) {
+		error.value = new Error(`Extension ${extConfig.value.extension} not found in package.json`);
+		return;
+	};
+
+	const { server, collection } = extConfig.value;
+	const { source, type } = extension;
+	extType.value = type;
+
 	try {
 		extProps.value = {};
 		ctx.value = {
@@ -212,12 +271,9 @@ async function loadRemoteComponent() {
 		};
 		error.value = null;
 		// Add a timestamp query param so it doesn’t get cached
-		let fullPath = path;
-		if (!fullPath.endsWith('.ts') && !fullPath.endsWith('.js')) {
-			fullPath += '/index.ts';
-		}
+
 		/* @vite-ignore */
-		const mod = await import(fullPath);
+		const mod = await import(`${server}/${source}`);
 		// `mod.default` is the actual SFC options or Vue component object
 		const extension = mod.default;
 		if (type === 'module') {
@@ -240,14 +296,14 @@ async function loadRemoteComponent() {
 		} else {
 			extensionDef.value = extension.component;
 			extFields.value = [
-				TestValueField,
+				...TestValueFields,
 				...(typeof extension.options === 'function' ? extension.options(ctx.value) : extension.options),
 			];
 		}
 
 		showDialog.value = false;
 	} catch (e) {
-		console.log(e);
+		console.warn(e);
 		error.value = e;
 		extensionDef.value = null;
 	}
@@ -264,6 +320,7 @@ hmr();
 	z-index: 1000;
 }
 
+.dev-canvas,
 .dev-canvas-dialog.v-card {
 	--theme--form--row-gap: 24px;
 	--v-sheet-padding: 24px;

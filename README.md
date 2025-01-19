@@ -1,7 +1,14 @@
 # Directus Extension Dev Canvas
 
+A module for developing Directus UI extensions with **hot-reloading**.
 
-## Installation
+| Edit bundled or single extensions | Edit displays with live setup options |
+| -------- | ------- |
+| <img src="./screenshots/ExtensionSelector.png" width="200" alt="Selecting an extension"> | <img src="./screenshots/DevelopDisplays.png" width="300" alt="Selecting an extension"> |
+
+## 1 Setup
+
+First install this extension in your Directus project:
 
 ### NPM Package
 
@@ -13,7 +20,9 @@ npm install directus-extension-dev-canvas -S -D
 
 Follow the [official Directus extension installation guide](https://docs.directus.io/extensions/installing-extensions.html) for Docker-based installations.
 
-## Configuration (In your custom extension that you are developing)
+## 2 Configuration
+
+**In your custom extension that you are developing follow these steps carefully:**
 
 1. Add a `vite.config.ts` file to the root of your extension with the following content:
 
@@ -21,15 +30,17 @@ Follow the [official Directus extension installation guide](https://docs.directu
 import vue from '@vitejs/plugin-vue';
 import { defineConfig } from 'vite';
 
+// Update this with your Directus URL
 const HOST_URL = 'http://localhost:8080';
 const LOAD_IN_HOST = true;
 // Update this with the correct values
+// Current values are for a Directus 11.4.0
 const HOST_DEPS = {
-  "@directus/extensions-sdk": "${HOST_URL}/admin/assets/@directus_extensions-sdk.BUQzFEMG.entry.js",
-  "pinia": "${HOST_URL}/admin/assets/pinia.CcPPvUKL.entry.js",
-  "vue-i18n": "${HOST_URL}/admin/assets/vue-i18n.BDgO9r8I.entry.js",
-  "vue-router": "${HOST_URL}/admin/assets/vue-router.Y6owf-Uq.entry.js",
-  "vue": "${HOST_URL}/admin/assets/vue.Di93ddbl.entry.js"
+  "@directus/extensions-sdk": `${HOST_URL}/admin/assets/@directus_extensions-sdk.BUQzFEMG.entry.js`,
+  "pinia": `${HOST_URL}/admin/assets/pinia.CcPPvUKL.entry.js`,
+  "vue-i18n": `${HOST_URL}/admin/assets/vue-i18n.BDgO9r8I.entry.js`,
+  "vue-router": `${HOST_URL}/admin/assets/vue-router.Y6owf-Uq.entry.js`,
+  "vue": `${HOST_URL}/admin/assets/vue.Di93ddbl.entry.js`
 };
 
 // https://vitejs.dev/config/
@@ -48,8 +59,10 @@ export default defineConfig({
 
 ```bash
 node ./node_modules/directus-extension-dev-canvas/host-deps.js
-> Copy the output and paste it into your vite.config.ts file
+> Copy the output and paste it as the value of HOST_DEPS into your vite.config.ts file
 ```
+
+> NOTE: Also update the HOST_URL with the correct URL of your Directus instance.
 
 3. Add the following to your extension's `package.json` file:
 ```json
@@ -58,21 +71,27 @@ node ./node_modules/directus-extension-dev-canvas/host-deps.js
 }
 ```
 
-4. Edit your environment variables to include the following:
+4. Start the vite server for your extension with `npm start`
+
+## 3 Final Steps
+
+In your Directus project, follow these steps:
+
+1. Edit your environment variables to include the following:
 ```
 CONTENT_SECURITY_POLICY_DIRECTIVES__SCRIPT_SRC="'self' 'unsafe-eval' http://localhost:5173"
-CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* ws://localhost:5173"
+CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http://localhost:5173 ws://localhost:5173"
 ```
 > Note: The port 5173 is the default port for Vite, if you are using a different port, please replace it with your port.
 
-5. Run your extension with `npm start`
 
-6. Start up your Directus instance, and navigate to the Developer Canvas module in the sidebar.
+2. Start up your Directus instance, and navigate to the Developer Canvas module in the sidebar.
 
-7. Enter the URL of your extension's index.ts file in the "URI" field, and select the type of extension you are developing.
-> Note: For bundled extensions you might have an extra folder eg. `http://localhost:5173/src/my-interface/index.ts`
+3. Update if needed the the URL of the running vite server
 
-8. Click "Load It", and your extension should now be loaded in the Developer Canvas module.
+4. If it is a bundle, select the extension you want to work on.
+
+4. Click **"Load It"**, and your extension should now be loaded in the Developer Canvas module.
 
 ## Supported UI Extension Types
 
@@ -83,6 +102,12 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* ws://l
 - 🔰 Interfaces
 
 🔰 = Works for simple extensions, but not those with relationships.
+
+# Known Issues
+
+Console error: `Refused to connect to [URL]because it violates the document's Content Security Policy.`
+> Check step 3.1 of the installation instructions.
+
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-import { getCurrentInstance, nextTick, onMounted, onUnmounted, queuePostFlushCb } from 'vue';
+import { ComponentInstance, ComponentInternalInstance, getCurrentInstance, nextTick, onMounted, onUnmounted, queuePostFlushCb } from 'vue';
 
 let loaded = false;
 export default function hmr() {
@@ -15,8 +15,8 @@ export default function hmr() {
 
 	const map = new Map();
 
-	function registerHMR(instance) {
-		console.log('registerHMR', instance);
+	function registerHMR(instance: any) {
+		// console.debug('registerHMR', instance);
 		const id = instance.type.__hmrId;
 		let record = map.get(id);
 		if (!record) {
@@ -26,12 +26,12 @@ export default function hmr() {
 		record.instances.add(instance);
 	}
 
-	function unregisterHMR(instance) {
+	function unregisterHMR(instance: any) {
 		map.get(instance.type.__hmrId).instances.delete(instance);
 	}
 
-	function createRecord(id, initialDef) {
-		console.log('createRecord', id, initialDef);
+	function createRecord(id: string, initialDef: any) {
+		// console.debug('createRecord', id, initialDef);
 		if (map.has(id)) {
 			const record = map.get(id);
 
@@ -51,7 +51,7 @@ export default function hmr() {
 
 		const origSetup = normalized.setup;
 		if (origSetup._isPatched) return true;
-		normalized.setup = function (props, context) {
+		normalized.setup = function (props: any, context: any) {
 			onMounted(() => {
 				registerHMR(getCurrentInstance());
 			});
@@ -65,8 +65,8 @@ export default function hmr() {
 		return true;
 	}
 
-	function rerender(id, newRender) {
-		console.log('rerender', id);
+	function rerender(id: string, newRender: any) {
+		// console.debug('rerender', id);
 		const record = map.get(id);
 		if (!record) {
 			return;
@@ -84,8 +84,8 @@ export default function hmr() {
 		});
 	}
 
-	function reload(id, newComp) {
-		console.log('reload', id);
+	function reload(id: string, newComp: any) {
+		// console.debug('reload', id);
 		const record = map.get(id);
 		if (!record) return;
 		newComp = normalizeClassComponent(newComp);
@@ -133,11 +133,11 @@ export default function hmr() {
 	}
 }
 
-function normalizeClassComponent(component) {
+function normalizeClassComponent(component: any) {
 	return typeof component === 'function' && '__vccOpts' in component ? component.__vccOpts : component;
 }
 
-function updateComponentDef(oldComp, newComp) {
+function updateComponentDef(oldComp: any, newComp: any) {
 	Object.assign(oldComp, newComp);
 	for (const key in oldComp) {
 		if (key !== '__file' && !(key in newComp)) {
@@ -146,8 +146,8 @@ function updateComponentDef(oldComp, newComp) {
 	}
 }
 
-function tryWrap(fn) {
-	return (id, arg) => {
+function tryWrap(fn: (id: string, arg: any) => any) {
+	return (id: string, arg: any) => {
 		try {
 			return fn(id, arg);
 		} catch (e) {

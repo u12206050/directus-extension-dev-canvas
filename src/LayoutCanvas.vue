@@ -41,12 +41,13 @@ const { t } = useI18n();
 
 const props = defineProps<{
 	config: LayoutConfig;
+	collection?: string;
 }>();
 
 const { layoutWrapper } = useLayout(toRef(props, 'config'));
 const ready = ref(true);
 
-const collection = ref('');
+const collection = ref(props.collection);
 const layoutOptions = ref({});
 const selection = ref([]);
 const layoutQuery = ref({});
