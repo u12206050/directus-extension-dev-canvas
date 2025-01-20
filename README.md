@@ -106,8 +106,14 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http:/
 
 # Known Issues
 
-Console error: `Refused to connect to [URL]because it violates the document's Content Security Policy.`
+>Console error: `Refused to connect to [URL]because it violates the document's Content Security Policy.`
+>
 > Check step 3.1 of the installation instructions.
+
+
+> Error: `Failed to fetch dynamically imported module`:
+>
+> Ensure the vite server is running and the URL is correct.
 
 
 ## Contributing
