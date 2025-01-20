@@ -24,7 +24,7 @@ Follow the [official Directus extension installation guide](https://docs.directu
 
 **In your custom extension that you are developing follow these steps carefully:**
 
-1. Add a `vite.config.ts` file to the root of your extension with the following content:
+1. Add a file `vite.config.js` (`vite.config.ts` if using typescript), to the root of your extension with the following content:
 
 ```ts
 import vue from '@vitejs/plugin-vue';
@@ -43,9 +43,11 @@ const HOST_DEPS = {
   "vue": `${HOST_URL}/admin/assets/vue.Di93ddbl.entry.js`
 };
 
-// https://vitejs.dev/config/
 export default defineConfig({
 	plugins: [vue()],
+	server: {
+		cors: true,
+	},
 	resolve: {
 		alias: {
 			...(LOAD_IN_HOST ? HOST_DEPS : undefined),
