@@ -96,6 +96,12 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http:/
 
 4. Click **"Load It"**, and your extension should now be loaded in the Developer Canvas module.
 
+## Note
+
+- The Developer Canvas module is only available to users with the `admin_access` permission.
+
+- You still need to manually run `npm run build` to actually bundle your extension once you want to use it outside of the Developer Canvas module.
+
 ## Supported UI Extension Types
 
 - ✅ Bundles
