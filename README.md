@@ -13,7 +13,7 @@ First install this extension in your Directus project:
 ### NPM Package
 
 ```bash
-npm install directus-extension-dev-canvas -S -D
+npm install directus-extension-dev-canvas -S
 ```
 
 ### Docker
@@ -86,6 +86,7 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http:/
 
 
 2. Start up your Directus instance, and navigate to the Developer Canvas module in the sidebar.
+> You might have to enable the module in the settings first time you load it.
 
 3. Update if needed the the URL of the running vite server
 
