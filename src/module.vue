@@ -277,9 +277,9 @@ async function loadRemoteComponent() {
 		// `mod.default` is the actual SFC options or Vue component object
 		const extension = mod.default;
 		if (type === 'module') {
-			const root = extension.routes.find(r => r.path === '');
+			const root = extension.routes.find(r => r.path === '') || extension.routes[0];
 			if (!root) {
-				throw new Error('No root route found');
+				throw new Error('No root route found, ensure your module contains at least one route.');
 			}
 			if (activeRoute) {
 				router.replace(`/dev-canvas`);
