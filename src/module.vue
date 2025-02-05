@@ -216,6 +216,9 @@ async function loadExtensions() {
 		if (extension.type === 'bundle') {
 			extensions.value = extension.entries.filter((ext: any) => UI_EXTENSIONS.includes(ext.type));
 		} else if (UI_EXTENSIONS.includes(extension.type)) {
+			if (!extension.name) {
+				extension.name = pkg.name;
+			}
 			extensions.value = [extension];
 			extConfig.value.extension = extension.name;
 		} else {

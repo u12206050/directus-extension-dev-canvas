@@ -2,7 +2,7 @@
 	"name": "directus-extension-dev-canvas",
 	"description": "A module for developing Directus extensions with hot-reloading",
 	"icon": "extension",
-	"version": "1.0.3",
+	"version": "1.0.4",
 	"license": "GNU-AGPL-3.0",
 	"repository": "https://github.com/u12206050/directus-extension-dev-canvas.git",
 	"author": "Gerard Lamusse",
