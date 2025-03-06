@@ -26,7 +26,7 @@ function scanDependencyFiles() {
 	// Create regex patterns for each dependency
 	const patterns = DEPENDENCIES.map(dep => ({
 		name: dep,
-		pattern: new RegExp(`^${transformPackageName(dep)}\\.[a-zA-Z0-9-]+\\.entry\\.js$`),
+		pattern: new RegExp(`^${transformPackageName(dep)}\\.[a-zA-Z0-9-_]+\\.entry\\.js$`),
 	}));
 
 	// Scan files and match against patterns

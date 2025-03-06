@@ -34,13 +34,14 @@ import { defineConfig } from 'vite';
 const HOST_URL = 'http://localhost:8080';
 const LOAD_IN_HOST = true;
 // Update this with the correct values
-// Current values are for a Directus 11.4.0
+// On root, run `node node_modules/directus-extension-dev-canvas/host-deps.js` to generate new list
+// Current values are for a Directus 11.5.0
 const HOST_DEPS = {
-  "@directus/extensions-sdk": `${HOST_URL}/admin/assets/@directus_extensions-sdk.BUQzFEMG.entry.js`,
-  "pinia": `${HOST_URL}/admin/assets/pinia.CcPPvUKL.entry.js`,
-  "vue-i18n": `${HOST_URL}/admin/assets/vue-i18n.BDgO9r8I.entry.js`,
-  "vue-router": `${HOST_URL}/admin/assets/vue-router.Y6owf-Uq.entry.js`,
-  "vue": `${HOST_URL}/admin/assets/vue.Di93ddbl.entry.js`
+  "@directus/extensions-sdk": `${HOST_URL}/admin/assets/@directus_extensions-sdk.DWZqRl_w.entry.js`,
+  "pinia": `${HOST_URL}/admin/assets/pinia.CgQSnxxV.entry.js`,
+  "vue-i18n": `${HOST_URL}/admin/assets/vue-i18n.DjdmXneM.entry.js`,
+  "vue-router": `${HOST_URL}/admin/assets/vue-router.CUNOcKiw.entry.js`,
+  "vue": `${HOST_URL}/admin/assets/vue.wgR5vgTp.entry.js`
 };
 
 export default defineConfig({
