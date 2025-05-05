@@ -4,7 +4,7 @@ A module for developing Directus UI extensions with **hot-reloading**.
 
 | Edit bundled or single extensions | Edit displays with live setup options |
 | -------- | ------- |
-| <img src="./screenshots/ExtensionSelector.png" width="200" alt="Selecting an extension"> | <img src="./screenshots/DevelopDisplays.png" width="300" alt="Selecting an extension"> |
+| <img src="https://github.com/u12206050/directus-extension-dev-canvas/raw/main/screenshots/ExtensionSelector.png" width="200" alt="Selecting an extension"> | <img src="https://github.com/u12206050/directus-extension-dev-canvas/raw/main/screenshots/DevelopDisplays.png" width="300" alt="Selecting an extension"> |
 
 ## 1 Setup
 
