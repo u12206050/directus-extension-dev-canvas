@@ -20,7 +20,7 @@
 		"type": "module",
 		"path": "dist/index.js",
 		"source": "src/index.ts",
-		"host": "^10.10.0"
+		"host": ">=11.0.0"
 	},
 	"scripts": {
 		"build": "directus-extension build",
@@ -30,11 +30,13 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@directus/extensions-sdk": "12.1.4",
+		"@directus/extensions": "4.0.4",
+		"@directus/extensions-sdk": "18.0.4",
+		"@directus/types": "16.2.0",
 		"@vue/test-utils": "^2.5.1",
 		"jsdom": "^25.0.1",
 		"typescript": "^5.7.3",
 		"vitest": "^2.1.9",
-		"vue": "^3.5.13"
+		"vue": "^3.5.24"
 	}
 }
