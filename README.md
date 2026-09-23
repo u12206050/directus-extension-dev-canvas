@@ -111,7 +111,24 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http:/
 - 🔰 Displays
 - 🔰 Interfaces
 
-🔰 = Works for simple extensions, but not those with relationships.
+🔰 = Works for simple extensions, and for many-to-one / one-to-many relational interfaces and displays. Many-to-any (m2a) relations aren't supported yet.
+
+### Testing relational interfaces/displays (m2o / o2m)
+
+If the interface or display you're developing is a many-to-one or one-to-many type, set **Related Collection**
+(next to **Test Collection**) to an existing collection in your project, then click **Load It**. Developer Canvas
+will register a temporary, in-memory field + relation for the duration of the preview, so the interface can
+resolve real relation data the same way it would for a real field.
+
+This never touches your database — nothing is written through the API. But it does inject that field into
+Directus's live relations/fields stores in your browser, under an obviously fake field name
+(`__dev_canvas_relation__`), so for as long as the preview is loaded, that field could theoretically show up
+anywhere else in the app that reads those stores for the same collection (e.g. the real Data Model settings
+page, if you have it open in another tab). It's cleared automatically when you change extension/collection,
+close the Developer Canvas dialog, or navigate away from the module.
+
+Many-to-any (m2a) relations aren't supported yet, since they need a simulated junction collection rather than
+just a fake field.
 
 # Known Issues
 
