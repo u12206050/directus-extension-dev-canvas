@@ -86,7 +86,6 @@ const DEFAULTS = {
 	server: 'http://localhost:5173',
 }
 const extConfig = ref(DEFAULTS);
-const extCollection = ref('');
 const extType = ref('');
 
 // Toggle this between changes to refresh the component
