@@ -29,33 +29,31 @@
 	<private-view
 		v-else
 		class="dev-canvas no-sidebar"
-		title="Development Canvas"
-		:split-view="!!extensionDef">
+		title="Development Canvas">
 
 		<v-sheet v-if="!extensionDef">
 			<v-notice>No extension loaded</v-notice>
 		</v-sheet>
 
-		<v-sheet v-else>
-			<v-form v-model="extProps" :fields="extFields" />
-		</v-sheet>
+		<div v-else class="dev-canvas-columns">
+			<v-sheet class="dev-canvas-column">
+				<v-form v-model="extProps" :fields="extFields" />
+			</v-sheet>
 
-		<template #splitView>
-			<v-sheet v-if="extensionDef && showExt">
+			<v-sheet class="dev-canvas-column">
+				<div class="dev-canvas-preview-label type-label">Preview</div>
 				<component
+					v-if="showExt"
 					:is="extensionDef"
 					v-bind="extProps"
 					:collection="extConfig.collection"
 					:field="extField"
 					@input="updateExtValue" />
+				<v-button class="dev-canvas-refresh" x-small secondary @click="refreshExt">Refresh</v-button>
 			</v-sheet>
-			<br />
-			<v-sheet>
-				<v-button x-small secondary @click="refreshExt">Refresh</v-button>
-			</v-sheet>
-		</template>
+		</div>
 	</private-view>
-	
+
 </template>
 
 <script setup lang="ts">
@@ -389,5 +387,30 @@ hmr();
 
 .dev-canvas .field {
 	padding: 4px 0;
+}
+
+.dev-canvas-columns {
+	display: flex;
+	align-items: flex-start;
+	gap: 32px;
+}
+
+.dev-canvas-column {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.dev-canvas-preview-label {
+	margin-bottom: 8px;
+}
+
+.dev-canvas-refresh {
+	margin-top: 16px;
+}
+
+@media (max-width: 960px) {
+	.dev-canvas-columns {
+		flex-direction: column;
+	}
 }
 </style>
