@@ -59,15 +59,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { useStores } from '@directus/composables';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import LayoutCanvas from './LayoutCanvas.vue';
 import hmr from './hmr';
+import { createRelationPreviewController, type RelationLocalType } from './relation-preview';
 
 const router = useRouter();
 let activeRoute: any;
 const showDialog = ref(true);
 const ctx = ref();
+
+const stores = useStores();
+const fieldsStore = stores.useFieldsStore();
+const relationsStore = stores.useRelationsStore();
+const relationPreview = createRelationPreviewController(fieldsStore, relationsStore);
+onUnmounted(() => relationPreview.clear());
 
 // This ref will hold the actual component definition
 const extensionDef = ref();
@@ -85,7 +93,7 @@ const extType = ref('');
 const showExt = ref(true);
 
 // For displays, interfaces
-const extField = 'value';
+const extField = ref('value');
 const extFields = ref([]);
 const extProps = ref<Record<string, any>>({});
 
@@ -150,6 +158,30 @@ const LoadExtForm = computed(() => {
 				],
 				hidden: true,
 				note: "This is optional, your extension might not need it.",
+			},
+		},
+		{
+			name: 'Related Collection',
+			field: 'related_collection',
+			type: 'string',
+			meta: {
+				interface: 'system-collection',
+				options: {
+					placeholder: 'Select collection',
+				},
+				conditions: [
+					{
+						name: "Extension selected",
+						rule: {
+							extension: {
+								_nnull: true,
+							},
+						},
+						hidden: false,
+					},
+				],
+				hidden: true,
+				note: "Only needed to preview a many-to-one or one-to-many interface/display.",
 			},
 		},
 	];
@@ -243,12 +275,14 @@ async function loadRemoteComponent() {
 		return;
 	};
 
-	const { server, collection } = extConfig.value;
+	const { server, collection, related_collection } = extConfig.value;
 	const { source, type } = extension;
 	extType.value = type;
 
 	try {
 		extProps.value = {};
+		extField.value = 'value';
+		relationPreview.clear();
 		ctx.value = {
 			field: {
 				type: 'unknown',
@@ -301,6 +335,23 @@ async function loadRemoteComponent() {
 			extensionDef.value = extension;
 		} else {
 			extensionDef.value = extension.component;
+
+			const localTypes: string[] = extension.localTypes ?? [];
+			const localType: RelationLocalType | null = localTypes.includes('m2o')
+				? 'm2o'
+				: localTypes.includes('o2m')
+				? 'o2m'
+				: null;
+			const preview = relationPreview.apply(localType, collection, related_collection, fieldsStore);
+
+			if (preview) {
+				extField.value = preview.field;
+				const previewField = preview.fields.find(f => f.field === preview.field);
+				ctx.value.relations[preview.type] = preview.relation;
+				ctx.value.field.type = previewField?.type ?? ctx.value.field.type;
+				ctx.value.field.meta = previewField?.meta ?? null;
+			}
+
 			extFields.value = [
 				...TestValueFields,
 				...(typeof extension.options === 'function' ? extension.options(ctx.value) : extension.options),
