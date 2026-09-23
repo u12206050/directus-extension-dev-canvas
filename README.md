@@ -129,6 +129,8 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http:/
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+Run `npm install` then `npm test` to run the unit tests before submitting a change.
+
 ### Contributors:
 
  - YOUR NAME HERE ;)

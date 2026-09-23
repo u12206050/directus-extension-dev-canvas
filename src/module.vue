@@ -46,7 +46,8 @@
 					:is="extensionDef"
 					v-bind="extProps"
 					:collection="extConfig.collection"
-					:field="extField" />
+					:field="extField"
+					@input="updateExtValue" />
 			</v-sheet>
 			<br />
 			<v-sheet>
@@ -84,8 +85,9 @@ const extType = ref('');
 const showExt = ref(true);
 
 // For displays, interfaces
+const extField = 'value';
 const extFields = ref([]);
-const extProps = ref({});
+const extProps = ref<Record<string, any>>({});
 
 const extensions = ref<Array<{
 	type: string;
@@ -173,14 +175,11 @@ try {
 	const storedSettings = localStorage.getItem('dev-canvas-settings');
 	if (storedSettings) {
 		extConfig.value = JSON.parse(storedSettings);
-		if (extConfig.value.extension) {
-			loadRemoteComponent();
-		} else {
+		if (!extConfig.value.extension) {
 			extConfig.value = DEFAULTS;
 		}
 	}
 } catch (e) {
-	// ignore
 	extConfig.value = DEFAULTS;
 }
 
@@ -198,6 +197,10 @@ function refreshExt() {
 	nextTick(() => {
 		showExt.value = true;
 	});
+}
+
+function updateExtValue(value: unknown) {
+	extProps.value.value = value;
 }
 
 async function loadExtensions() {

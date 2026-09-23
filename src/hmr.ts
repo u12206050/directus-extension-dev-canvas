@@ -1,11 +1,10 @@
-import { ComponentInstance, ComponentInternalInstance, getCurrentInstance, nextTick, onMounted, onUnmounted, queuePostFlushCb } from 'vue';
+import { getCurrentInstance, nextTick, onMounted, onUnmounted, queuePostFlushCb } from 'vue';
 
 let loaded = false;
 export default function hmr() {
 	if (loaded) return;
 	loaded = true;
 
-	let isHmrUpdating = false;
 	const hmrDirtyComponents = new Map();
 	window.__VUE_HMR_RUNTIME__ = {
 		createRecord: tryWrap(createRecord),
@@ -50,7 +49,7 @@ export default function hmr() {
 		});
 
 		const origSetup = normalized.setup;
-		if (origSetup._isPatched) return true;
+		if (origSetup && origSetup._isPatched) return true;
 		normalized.setup = function (props: any, context: any) {
 			onMounted(() => {
 				registerHMR(getCurrentInstance());
@@ -58,7 +57,7 @@ export default function hmr() {
 			onUnmounted(() => {
 				unregisterHMR(getCurrentInstance());
 			});
-			return origSetup.call(this, props, context);
+			return origSetup ? origSetup.call(this, props, context) : undefined;
 		};
 
 		normalized.setup._isPatched = true;
@@ -78,9 +77,7 @@ export default function hmr() {
 				normalizeClassComponent(instance.type).render = newRender;
 			}
 			instance.renderCache = [];
-			isHmrUpdating = true;
 			instance.update();
-			isHmrUpdating = false;
 		});
 	}
 
@@ -102,6 +99,8 @@ export default function hmr() {
 				hmrDirtyComponents.set(oldComp, (dirtyInstances = new Set()));
 			}
 			dirtyInstances.add(instance);
+			instance.render = oldComp.render;
+			instance.renderCache = [];
 			instance.appContext.propsCache.delete(instance.type);
 			instance.appContext.emitsCache.delete(instance.type);
 			instance.appContext.optionsCache.delete(instance.type);
@@ -111,9 +110,8 @@ export default function hmr() {
 				dirtyInstances.delete(instance);
 			} else if (instance.parent) {
 				nextTick(() => {
-					isHmrUpdating = true;
+					instance.update();
 					instance.parent.update();
-					isHmrUpdating = false;
 					dirtyInstances.delete(instance);
 				});
 			} else if (instance.appContext.reload) {
