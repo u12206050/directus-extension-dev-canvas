@@ -2,6 +2,15 @@ import type { Field, FieldMeta, Relation, RelationMeta } from '@directus/types';
 
 export const RELATION_PREVIEW_FIELD = '__dev_canvas_relation__';
 const REVERSE_FIELD = '__dev_canvas_relation_reverse__';
+const PREVIEW_FIELDS = [RELATION_PREVIEW_FIELD, REVERSE_FIELD];
+
+function isPreviewField(field: Field): boolean {
+	return PREVIEW_FIELDS.includes(field.field);
+}
+
+function isPreviewRelation(relation: Relation): boolean {
+	return PREVIEW_FIELDS.includes(relation.field) || PREVIEW_FIELDS.includes(relation.meta?.one_field ?? '');
+}
 
 export type RelationLocalType = 'm2o' | 'o2m';
 
@@ -136,17 +145,20 @@ export function buildRelationPreview(
 /**
  * Keeps at most one relation preview injected into the live fields/relations stores at a time,
  * so switching extension/collection never leaves a stale synthetic field behind.
+ *
+ * Injected entries are matched by their reserved field names rather than by reference: Pinia
+ * hands back reactive proxies of what was stored, and a previous canvas instance (e.g. before an
+ * HMR reload) may have left entries behind that this controller never tracked.
  */
 export function createRelationPreviewController(fieldsStore: PreviewFieldsCollection, relationsStore: PreviewRelationsCollection) {
-	let active: RelationPreview | null = null;
-
 	function clear() {
-		if (!active) return;
-		const injectedFields = active.fields;
-		const injectedRelation = active.relation;
-		fieldsStore.fields = fieldsStore.fields.filter((field) => !injectedFields.includes(field));
-		relationsStore.relations = relationsStore.relations.filter((relation) => relation !== injectedRelation);
-		active = null;
+		if (fieldsStore.fields.some(isPreviewField)) {
+			fieldsStore.fields = fieldsStore.fields.filter((field) => !isPreviewField(field));
+		}
+
+		if (relationsStore.relations.some(isPreviewRelation)) {
+			relationsStore.relations = relationsStore.relations.filter((relation) => !isPreviewRelation(relation));
+		}
 	}
 
 	function apply(
@@ -163,7 +175,6 @@ export function createRelationPreviewController(fieldsStore: PreviewFieldsCollec
 
 		fieldsStore.fields = [...fieldsStore.fields, ...preview.fields];
 		relationsStore.relations = [...relationsStore.relations, preview.relation];
-		active = preview;
 		return preview;
 	}
 

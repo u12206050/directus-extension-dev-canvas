@@ -1,6 +1,7 @@
 import { getRelationType, getRelations } from '@directus/utils';
 import type { Field, Relation } from '@directus/types';
 import { describe, expect, it } from 'vitest';
+import { reactive } from 'vue';
 import { buildRelationPreview, createRelationPreviewController, RELATION_PREVIEW_FIELD } from './relation-preview';
 
 function fakePkField(collection: string, type: Field['type'] = 'integer'): Field {
@@ -103,6 +104,33 @@ describe('createRelationPreviewController', () => {
 
 		expect(fieldsStore.fields).toEqual([realField]);
 		expect(relationsStore.relations).toEqual([realRelation]);
+	});
+
+	it('clears entries from reactive (Pinia-like) stores, where stored items come back as proxies', () => {
+		const fieldsStore = reactive({ fields: [] as Field[] });
+		const relationsStore = reactive({ relations: [] as Relation[] });
+		const controller = createRelationPreviewController(fieldsStore, relationsStore);
+
+		controller.apply('o2m', 'authors', 'articles', fieldsLookup);
+		controller.apply('o2m', 'authors', 'articles', fieldsLookup);
+
+		expect(fieldsStore.fields).toHaveLength(2);
+		expect(relationsStore.relations).toHaveLength(1);
+
+		controller.clear();
+		expect(fieldsStore.fields).toHaveLength(0);
+		expect(relationsStore.relations).toHaveLength(0);
+	});
+
+	it('clears entries left behind by a previous controller instance', () => {
+		const { fieldsStore, relationsStore } = makeStores();
+		createRelationPreviewController(fieldsStore, relationsStore).apply('o2m', 'authors', 'articles', fieldsLookup);
+
+		const controller = createRelationPreviewController(fieldsStore, relationsStore);
+		controller.apply('o2m', 'authors', 'articles', fieldsLookup);
+
+		expect(fieldsStore.fields).toHaveLength(2);
+		expect(relationsStore.relations).toHaveLength(1);
 	});
 
 	it('clears and returns null when applied with no local type', () => {

@@ -113,6 +113,23 @@ CONTENT_SECURITY_POLICY_DIRECTIVES__CONNECT_SRC="'self' https://* wss://* http:/
 
 🔰 = Works for simple extensions, and for many-to-one / one-to-many relational interfaces and displays. Many-to-any (m2a) relations aren't supported yet.
 
+### Previewing interfaces and displays
+
+The canvas renders the interface/display next to its options, passing the same props Directus does
+(`value`, `type`, `collection`, `field`, `fieldData`, `primaryKey`, `disabled`, and every option as its own prop).
+
+- **Options**: option fields start at their `schema.default_value`. Custom options components (`options: MyOptions.vue`)
+  are rendered instead of the options form, and receive `value` / `collection` and emit `input`, like in Directus.
+- **Field Type**: if the extension supports several `types`, pick the one to preview with. The Test Value editor
+  follows it (e.g. a JSON code editor for `json`, a checkbox for `boolean`).
+- **Test Value**: the value handed to the extension. Values emitted by an interface show up here too. Displays are
+  remounted whenever it changes, as Directus does per row, so a display that only reads `value` in `setup()` stays in
+  sync. Relational displays take the related item(s) as JSON, e.g. `{ "title": "Hello" }`.
+- **Disabled** (interfaces only): renders the interface in its disabled state.
+- Interfaces get an injected `values` (the item being edited), as they do inside a Directus form.
+- If the extension throws while rendering (often in `setup()`, e.g. a required option isn't set yet), the error is
+  shown in the preview and logged to the console. Changing an option or clicking **Refresh** retries.
+
 ### Testing relational interfaces/displays (m2o / o2m)
 
 If the interface or display you're developing is a many-to-one or one-to-many type, set **Related Collection**

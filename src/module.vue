@@ -36,19 +36,53 @@
 		</v-sheet>
 
 		<div v-else class="dev-canvas-columns">
-			<v-sheet class="dev-canvas-column">
-				<v-form v-model="extProps" :fields="extFields" />
-			</v-sheet>
+			<div class="dev-canvas-column">
+				<v-sheet>
+					<v-form v-model="previewSettings" :fields="previewSettingsFields" />
+				</v-sheet>
+
+				<v-sheet class="dev-canvas-options">
+					<div class="dev-canvas-section-label type-label">Options</div>
+					<component
+						v-if="optionsComponent"
+						:is="optionsComponent"
+						:value="extOptions"
+						:collection="extConfig.collection"
+						:field="extField"
+						@input="extOptions = $event ?? {}" />
+					<v-form v-else-if="optionsFields.length" v-model="extOptions" :fields="optionsFields" primary-key="+" />
+					<v-notice v-else>This {{ extType }} has no options.</v-notice>
+				</v-sheet>
+			</div>
 
 			<v-sheet class="dev-canvas-column">
-				<div class="dev-canvas-preview-label type-label">Preview</div>
-				<component
-					v-if="showExt"
-					:is="extensionDef"
-					v-bind="extProps"
-					:collection="extConfig.collection"
-					:field="extField"
-					@input="updateExtValue" />
+				<div class="dev-canvas-section-label type-label">Preview</div>
+				<PreviewBoundary v-if="showExt" :reset-key="previewKey">
+					<component
+						v-if="extType === 'display'"
+						:is="extensionDef"
+						v-bind="extOptions"
+						:value="previewSettings.value"
+						:type="fieldType"
+						:collection="extConfig.collection"
+						:field="extField"
+						:interface="null"
+						:interface-options="{}" />
+					<component
+						v-else
+						:is="extensionDef"
+						v-bind="extOptions"
+						:value="previewSettings.value"
+						:type="fieldType"
+						:collection="extConfig.collection"
+						:field="extField"
+						:field-data="fieldData"
+						primary-key="+"
+						width="full"
+						:disabled="!!previewSettings.disabled"
+						@input="updateExtValue"
+						@set-field-value="onSetFieldValue" />
+				</PreviewBoundary>
 				<v-button class="dev-canvas-refresh" x-small secondary @click="refreshExt">Refresh</v-button>
 			</v-sheet>
 		</div>
@@ -58,11 +92,19 @@
 
 <script setup lang="ts">
 import { useStores } from '@directus/composables';
-import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, provide, ref, shallowRef, watch, type Component } from 'vue';
 import { RouterView, useRouter } from 'vue-router';
 import LayoutCanvas from './LayoutCanvas.vue';
+import PreviewBoundary from './PreviewBoundary';
 import hmr from './hmr';
 import { createRelationPreviewController, type RelationLocalType } from './relation-preview';
+import {
+	buildTestValueField,
+	getOptionDefaults,
+	pickFieldType,
+	resolveOptions,
+	type OptionField,
+} from './ui-preview';
 
 const router = useRouter();
 let activeRoute: any;
@@ -88,11 +130,17 @@ const extType = ref('');
 
 // Toggle this between changes to refresh the component
 const showExt = ref(true);
+const previewKey = ref(0);
 
 // For displays, interfaces
 const extField = ref('value');
-const extFields = ref([]);
-const extProps = ref<Record<string, any>>({});
+const extDefinition = shallowRef<any>(null);
+const optionsFields = ref<OptionField[]>([]);
+const optionsComponent = shallowRef<Component | null>(null);
+const extOptions = ref<Record<string, any>>({});
+const previewSettings = ref<{ type?: string; value?: unknown; disabled?: boolean }>({});
+// Set when a relation preview is active: the fake field's type is fixed by the relation.
+const relationFieldType = ref<string | null>(null);
 
 const extensions = ref<Array<{
 	type: string;
@@ -184,20 +232,73 @@ const LoadExtForm = computed(() => {
 	];
 });
 
-const TestValueFields = [
-	{
-		name: 'Test Value',
-		field: 'value',
-		type: 'string',
-		meta: {
-			field: 'value',
-			interface: 'input',
-			options: {
-				placeholder: 'Test Value',
-			},
-		},
+const supportedTypes = computed<string[]>(() => extDefinition.value?.types ?? []);
+
+const fieldType = computed(() => relationFieldType.value ?? pickFieldType(supportedTypes.value, previewSettings.value.type));
+
+const fieldData = computed(() => ({
+	collection: extConfig.value.collection ?? null,
+	field: extField.value,
+	name: extField.value,
+	type: fieldType.value,
+	schema:
+		fieldType.value === 'alias'
+			? null
+			: { default_value: null, is_nullable: true, is_primary_key: false, max_length: null, has_auto_increment: false },
+	meta: {
+		...ctx.value?.field?.meta,
+		collection: extConfig.value.collection ?? null,
+		field: extField.value,
+		interface: extType.value === 'interface' ? extDefinition.value?.id : null,
+		display: extType.value === 'display' ? extDefinition.value?.id : null,
+		options: extType.value === 'interface' ? extOptions.value : null,
+		display_options: extType.value === 'display' ? extOptions.value : null,
 	},
-];
+}));
+
+// Interfaces rendered by Directus live inside a v-form, which provides the item being edited.
+provide(
+	'values',
+	computed(() => ({ [extField.value]: previewSettings.value.value })),
+);
+
+const previewSettingsFields = computed<OptionField[]>(() => {
+	const fields: OptionField[] = [];
+
+	if (!relationFieldType.value && supportedTypes.value.length > 1) {
+		fields.push({
+			name: 'Field Type',
+			field: 'type',
+			type: 'string',
+			meta: {
+				interface: 'select-dropdown',
+				width: extType.value === 'interface' ? 'half' : 'full',
+				options: { choices: supportedTypes.value.map((type) => ({ text: type, value: type })) },
+				note: 'The type of the field this extension is previewed on.',
+			},
+			schema: { default_value: supportedTypes.value[0] },
+		});
+	}
+
+	if (extType.value === 'interface') {
+		fields.push({
+			name: 'Disabled',
+			field: 'disabled',
+			type: 'boolean',
+			meta: {
+				interface: 'boolean',
+				width: 'half',
+				options: { label: 'Render the interface as disabled' },
+			},
+			schema: { default_value: false },
+		});
+	}
+
+	// Relational displays receive the related item(s) as their value, not the stored key.
+	const testValueType = extType.value === 'display' && relationFieldType.value ? 'json' : fieldType.value;
+	fields.push(buildTestValueField(testValueType as typeof fieldType.value));
+	return fields;
+});
 
 // Sync extPath with localStorage
 try {
@@ -219,9 +320,28 @@ watch(extConfig, (config) => {
 
 watch(() => extConfig.value.server, loadExtensions, { immediate: true });
 
-watch(extProps, refreshExt);
+// Remount when options or the field type change, since extensions commonly read those only on setup.
+// Interfaces receive the test value as a reactive prop and must not remount on it (they'd lose focus),
+// but Directus remounts displays per value (e.g. per table row), so displays commonly read it only on setup.
+watch(extOptions, refreshExt);
+
+watch(
+	() => previewSettings.value.value,
+	() => {
+		if (extType.value === 'display') refreshExt();
+	},
+);
+
+watch(fieldType, (type, oldType) => {
+	if (type === oldType || !extDefinition.value) return;
+	const { value: _discarded, ...settings } = previewSettings.value;
+	previewSettings.value = settings;
+	resolveExtensionOptions();
+	refreshExt();
+});
 
 function refreshExt() {
+	previewKey.value++;
 	showExt.value = false;
 	nextTick(() => {
 		showExt.value = true;
@@ -229,7 +349,24 @@ function refreshExt() {
 }
 
 function updateExtValue(value: unknown) {
-	extProps.value.value = value;
+	previewSettings.value = { ...previewSettings.value, value };
+}
+
+function onSetFieldValue({ field, value }: { field: string; value: unknown }) {
+	if (field === extField.value) updateExtValue(value);
+	else console.info(`[Dev Canvas] ${extType.value} tried to set field "${field}" to`, value);
+}
+
+function resolveExtensionOptions() {
+	// Preview as an existing field: options often hide settings while a field is still being created ('+').
+	ctx.value.editing = extField.value;
+	ctx.value.field.field = extField.value;
+	ctx.value.field.collection = extConfig.value.collection ?? null;
+	ctx.value.field.type = fieldType.value;
+	const { fields, component } = resolveOptions(extDefinition.value?.options, ctx.value);
+	optionsFields.value = fields;
+	optionsComponent.value = component;
+	extOptions.value = { ...getOptionDefaults(fields), ...extOptions.value };
 }
 
 async function loadExtensions() {
@@ -277,12 +414,18 @@ async function loadRemoteComponent() {
 	extType.value = type;
 
 	try {
-		extProps.value = {};
+		extOptions.value = {};
+		previewSettings.value = {};
+		extDefinition.value = null;
+		relationFieldType.value = null;
+		optionsFields.value = [];
+		optionsComponent.value = null;
 		extField.value = 'value';
 		relationPreview.clear();
 		ctx.value = {
 			field: {
 				type: 'unknown',
+				meta: null,
 			},
 			editing: '+',
 			collection,
@@ -332,6 +475,7 @@ async function loadRemoteComponent() {
 			extensionDef.value = extension;
 		} else {
 			extensionDef.value = extension.component;
+			extDefinition.value = extension;
 
 			const localTypes: string[] = extension.localTypes ?? [];
 			const localType: RelationLocalType | null = localTypes.includes('m2o')
@@ -345,14 +489,12 @@ async function loadRemoteComponent() {
 				extField.value = preview.field;
 				const previewField = preview.fields.find(f => f.field === preview.field);
 				ctx.value.relations[preview.type] = preview.relation;
-				ctx.value.field.type = previewField?.type ?? ctx.value.field.type;
 				ctx.value.field.meta = previewField?.meta ?? null;
+				relationFieldType.value = previewField?.type ?? null;
 			}
 
-			extFields.value = [
-				...TestValueFields,
-				...(typeof extension.options === 'function' ? extension.options(ctx.value) : extension.options),
-			];
+			resolveExtensionOptions();
+			refreshExt();
 		}
 
 		showDialog.value = false;
@@ -385,6 +527,20 @@ hmr();
 	display: none !important;
 }
 
+/* Directus 12+ lays private-view out in split panes, which keep their space even when emptied. */
+.dev-canvas .root-split {
+	grid-template-columns: 0 0 1fr !important;
+}
+
+.dev-canvas.no-sidebar .main-split {
+	grid-template-columns: 1fr 0 0 !important;
+}
+
+.dev-canvas .root-split > .sp-start,
+.dev-canvas.no-sidebar .main-split > .sp-end {
+	overflow: hidden;
+}
+
 .dev-canvas .field {
 	padding: 4px 0;
 }
@@ -400,8 +556,12 @@ hmr();
 	min-width: 0;
 }
 
-.dev-canvas-preview-label {
+.dev-canvas-section-label {
 	margin-bottom: 8px;
+}
+
+.dev-canvas-options {
+	margin-top: 16px;
 }
 
 .dev-canvas-refresh {
